@@ -62,7 +62,7 @@ archs = ["x86_64", "arm64", "universal2"]
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.9" }
 
 [tool.cibuildwheel.linux]
-archs = ["x86_64", "aarch64"]
+archs = ["native"]  # Only build for the host architecture
 manylinux-x86_64-image = "manylinux2014"
 manylinux-aarch64-image = "manylinux2014"
 
