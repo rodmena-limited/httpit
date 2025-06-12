@@ -59,7 +59,6 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "10.9" }
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
-before-all = "yum install -y gcc make"
 manylinux-x86_64-image = "manylinux2014"
 manylinux-aarch64-image = "manylinux2014"
 
