@@ -1,0 +1,116 @@
+name: Build Wheels
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, windows-2022, macos-11, macos-14]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.2
+        env:
+          # Build for Python 3.9 through 3.13
+          CIBW_BUILD: cp39-* cp310-* cp311-* cp312-* cp313-*
+          
+          # Skip 32-bit builds on Windows and musllinux builds
+          CIBW_SKIP: "*-win32 *-musllinux_* *i686"
+          
+          # macOS arm64 builds require macOS 11+
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          
+          # Linux architectures
+          CIBW_ARCHS_LINUX: x86_64 aarch64
+          
+          # Windows architectures
+          CIBW_ARCHS_WINDOWS: AMD64
+          
+          # Install system dependencies before building
+          CIBW_BEFORE_ALL_LINUX: >
+            yum install -y gcc make ||
+            apt-get update && apt-get install -y gcc make
+          
+          CIBW_BEFORE_ALL_MACOS: >
+            brew install gcc make || true
+            
+          CIBW_BEFORE_ALL_WINDOWS: >
+            choco install mingw make -y
+            
+          # Environment variables for optimized compilation
+          CIBW_ENVIRONMENT: >
+            FASTHTTP_OPTIMIZE=1
+            
+          CIBW_ENVIRONMENT_LINUX: >
+            FASTHTTP_OPTIMIZE=1
+            CFLAGS="-O3 -march=x86-64 -mtune=generic -fPIC"
+            
+          CIBW_ENVIRONMENT_MACOS: >
+            FASTHTTP_OPTIMIZE=1
+            CFLAGS="-O3 -fPIC"
+            MACOSX_DEPLOYMENT_TARGET=10.9
+            
+          CIBW_ENVIRONMENT_WINDOWS: >
+            FASTHTTP_OPTIMIZE=1
+            
+          # Test that the wheel works
+          CIBW_TEST_REQUIRES: pytest requests
+          CIBW_TEST_COMMAND: >
+            python -c "import fasthttp; print('FastHTTP version:', fasthttp.__version__)" &&
+            python -c "from fasthttp import HTTPServer; print('HTTPServer imported successfully')" &&
+            python -c "from fasthttp import _webfsd; print('C extension loaded')"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-sdist
+          path: dist/*.tar.gz
+
+  upload_pypi:
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+
+      - name: Display structure
+        run: ls -la dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

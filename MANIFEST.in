@@ -1,5 +1,26 @@
 include README.md
 include LICENSE
-include webfsd
+include COPYING
+include CHANGES
 include webfsd_python.c
-recursive-include fasthttp *.py
+include pyproject.toml
+
+# Include the webfsd source files needed for compilation
+include *.c
+include *.h
+include GNUmakefile
+include Makefile
+recursive-include mk *.mk
+
+# Include CGI test scripts
+recursive-include cgi *.cgi
+
+# Include the built webfsd binary if it exists
+include webfsd
+
+# Exclude build artifacts
+global-exclude *.o
+global-exclude *.so
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude .DS_Store

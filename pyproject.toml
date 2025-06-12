@@ -7,7 +7,7 @@ name = "fasthttp"
 version = "1.21.0"
 description = "Ultra-fast lightweight HTTP server"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 license = {text = "GPL-2.0"}
 authors = [
     {name = "Gerd Knorr (original), Python wrapper contributors"}
@@ -18,14 +18,14 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: C",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
 ]
 
@@ -38,3 +38,34 @@ fasthttp = "fasthttp.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["fasthttp*"]
+
+[tool.cibuildwheel]
+# Build for Python 3.9-3.13
+build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
+
+# Skip 32-bit builds, PyPy, and musllinux
+skip = "*-win32 *-manylinux_i686 pp* *musllinux*"
+
+# Test that wheels work correctly
+test-requires = "pytest"
+test-command = [
+    "python -c \"import fasthttp; print('FastHTTP imported')\"",
+    "python -c \"from fasthttp import HTTPServer; print('HTTPServer available')\"",
+]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64", "universal2"]
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.9" }
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+before-all = [
+    "yum install -y gcc make || apt-get update && apt-get install -y gcc make build-essential",
+]
+manylinux-x86_64-image = "manylinux2014"
+manylinux-aarch64-image = "manylinux2014"
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+before-build = "pip install delvewheel"
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
