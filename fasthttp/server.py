@@ -60,6 +60,7 @@ class HTTPServer:
                  bind_ip: Optional[str] = None,
                  # Server behavior
                  debug: bool = False,
+                 foreground: bool = True,
                  syslog: bool = False,
                  timeout: int = 60,
                  max_connections: int = 32,
@@ -120,6 +121,7 @@ class HTTPServer:
         self.ipv6_only = ipv6_only
         self.bind_ip = bind_ip
         self.debug = debug
+        self.foreground = foreground
         self.syslog = syslog
         self.timeout = timeout
         self.max_connections = max_connections
@@ -152,13 +154,14 @@ class HTTPServer:
             if not os.path.exists(self.root):
                 raise WebfsdError(f"Document root does not exist: {self.root}")
             
-            # Call the C function with only the core parameters for now
-            _webfsd.start_server(
-                port=self.port,
-                root=self.root,
-                debug=self.debug,
-                no_listing=self.no_listing
-            )
+            # Call the C function - start with minimal args and add optional ones
+            args = [self.port, self.root, self.debug, self.no_listing, self.foreground]
+            
+            # Add auth if provided
+            if self.auth is not None:
+                args.append(self.auth)
+            
+            _webfsd.start_server(*args)
             
     def stop(self):
         """Stop the HTTP server."""
@@ -186,10 +189,16 @@ class HTTPServer:
         
         This method will start the server and block the current thread
         until a keyboard interrupt (Ctrl+C) is received.
+        
+        In daemon mode (foreground=False), this will start the daemon
+        and return immediately.
         """
         def signal_handler(signum, frame):
             print("\nShutting down server...")
-            self.stop()
+            if self.foreground:  # Only stop if we can (foreground mode)
+                self.stop()
+            else:
+                print("Server is running as daemon. Use 'pkill httpit' to stop.")
             
         # Install signal handler
         old_handler = signal.signal(signal.SIGINT, signal_handler)
@@ -205,11 +214,16 @@ class HTTPServer:
                 print("Directory listing disabled")
             if self.auth:
                 print("Basic authentication enabled")
-            print("Press Ctrl+C to stop...")
             
-            # Block until server stops
-            while self.is_running():
-                time.sleep(0.5)
+            if self.foreground:
+                print("Press Ctrl+C to stop...")
+                # Block until server stops
+                while self.is_running():
+                    time.sleep(0.5)
+            else:
+                print("Server started as daemon.")
+                print("Use 'pkill httpit' or 'ps aux | grep webfsd' to manage the daemon.")
+                # Don't block in daemon mode
                 
         finally:
             # Restore old signal handler

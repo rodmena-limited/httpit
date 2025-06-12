@@ -45,6 +45,10 @@ Examples:
     # Server behavior
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Enable debug output')
+    parser.add_argument('-F', '--foreground', action='store_true', default=True,
+                        help='Do not fork into background (default: True)')
+    parser.add_argument('--no-foreground', dest='foreground', action='store_false',
+                        help='Fork into background (daemon mode)')
     parser.add_argument('-s', '--syslog', action='store_true',
                         help='Enable syslog for start/stop/errors')
     parser.add_argument('-t', '--timeout', type=int, default=60,
@@ -159,6 +163,7 @@ Examples:
             bind_ip=args.bind_ip,
             # Server behavior
             debug=args.debug,
+            foreground=args.foreground,
             syslog=args.syslog,
             timeout=args.timeout,
             max_connections=args.max_connections,

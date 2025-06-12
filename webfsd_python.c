@@ -33,6 +33,7 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
     /* Most commonly used optional parameters */
     int debug = 0;
     int no_listing = 0;
+    int foreground = 1;  /* Default to foreground mode */
     const char *auth = NULL;
     const char *log_file = NULL;
     const char *cors = NULL;
@@ -43,12 +44,12 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
     const char *index_file = NULL;
     
     static char *kwlist[] = {
-        "port", "root", "debug", "no_listing", "auth", "log", "cors", 
+        "port", "root", "debug", "no_listing", "foreground", "auth", "log", "cors", 
         "host", "bind_ip", "timeout", "max_connections", "index", NULL
     };
     
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|isiizzzziiz:start_server", kwlist,
-                                     &port, &root, &debug, &no_listing, &auth,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|isiiizzzziiz:start_server", kwlist,
+                                     &port, &root, &debug, &no_listing, &foreground, &auth,
                                      &log_file, &cors, &host, &bind_ip, &timeout,
                                      &max_connections, &index_file)) {
         return NULL;
@@ -105,7 +106,9 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
         }
         
         argv[argc++] = webfsd_path;
-        argv[argc++] = "-F";  /* Always run in foreground mode */
+        if (foreground) {
+            argv[argc++] = "-F";  /* Run in foreground mode */
+        }
         argv[argc++] = "-p";
         argv[argc++] = port_str;
         argv[argc++] = "-r";
@@ -166,28 +169,58 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
     /* Parent process */
     server_running = 1;
     
-    /* Give the server more time to start */
+    /* Give the server time to start */
     usleep(500000);  /* 500ms */
     
-    /* Check if the process is still running */
-    if (kill(server_pid, 0) != 0) {
-        server_running = 0;
-        server_pid = 0;
-        
-        /* Try to get the exit status */
+    /* If not in foreground mode, webfsd will fork and the initial process will exit */
+    if (!foreground) {
+        /* Wait for the initial process to exit (parent of daemon) */
         int status;
-        if (waitpid(server_pid, &status, WNOHANG) > 0) {
-            if (WIFEXITED(status)) {
-                PyErr_Format(WebfsdError, "Server exited with code %d", WEXITSTATUS(status));
-            } else if (WIFSIGNALED(status)) {
-                PyErr_Format(WebfsdError, "Server killed by signal %d", WTERMSIG(status));
+        pid_t wait_result = waitpid(server_pid, &status, 0);
+        
+        if (wait_result == server_pid) {
+            if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                /* Initial process exited successfully, daemon is running */
+                /* We can't track the daemon PID easily, so mark as running */
+                server_pid = -1;  /* Special value indicating daemon mode */
+            } else {
+                /* Initial process failed */
+                server_running = 0;
+                server_pid = 0;
+                if (WIFEXITED(status)) {
+                    PyErr_Format(WebfsdError, "Server failed to start (exit code %d)", WEXITSTATUS(status));
+                } else {
+                    PyErr_SetString(WebfsdError, "Server failed to start");
+                }
+                return NULL;
+            }
+        } else {
+            server_running = 0;
+            server_pid = 0;
+            PyErr_SetString(WebfsdError, "Failed to wait for server process");
+            return NULL;
+        }
+    } else {
+        /* Foreground mode - check if the process is still running */
+        if (kill(server_pid, 0) != 0) {
+            server_running = 0;
+            server_pid = 0;
+            
+            /* Try to get the exit status */
+            int status;
+            if (waitpid(server_pid, &status, WNOHANG) > 0) {
+                if (WIFEXITED(status)) {
+                    PyErr_Format(WebfsdError, "Server exited with code %d", WEXITSTATUS(status));
+                } else if (WIFSIGNALED(status)) {
+                    PyErr_Format(WebfsdError, "Server killed by signal %d", WTERMSIG(status));
+                } else {
+                    PyErr_SetString(WebfsdError, "Server failed to start");
+                }
             } else {
                 PyErr_SetString(WebfsdError, "Server failed to start");
             }
-        } else {
-            PyErr_SetString(WebfsdError, "Server failed to start");
+            return NULL;
         }
-        return NULL;
     }
     
     Py_RETURN_NONE;
@@ -197,7 +230,18 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
 static PyObject *
 webfsd_stop(PyObject *self, PyObject *args)
 {
-    if (!server_running || server_pid == 0) {
+    if (!server_running) {
+        PyErr_SetString(WebfsdError, "Server is not running");
+        return NULL;
+    }
+    
+    if (server_pid == -1) {
+        /* Daemon mode - we can't easily stop it from here */
+        PyErr_SetString(WebfsdError, "Cannot stop daemon mode server from Python. Use 'pkill httpit' or similar.");
+        return NULL;
+    }
+    
+    if (server_pid <= 0) {
         PyErr_SetString(WebfsdError, "Server is not running");
         return NULL;
     }
@@ -222,14 +266,19 @@ webfsd_stop(PyObject *self, PyObject *args)
 static PyObject *
 webfsd_is_running(PyObject *self, PyObject *args)
 {
-    if (server_running && server_pid > 0) {
-        /* Double-check the process is still alive */
-        if (kill(server_pid, 0) == 0) {
+    if (server_running) {
+        if (server_pid == -1) {
+            /* Daemon mode - assume it's running since we can't easily check */
             Py_RETURN_TRUE;
-        } else {
-            /* Process died */
-            server_running = 0;
-            server_pid = 0;
+        } else if (server_pid > 0) {
+            /* Foreground mode - check if process is still alive */
+            if (kill(server_pid, 0) == 0) {
+                Py_RETURN_TRUE;
+            } else {
+                /* Process died */
+                server_running = 0;
+                server_pid = 0;
+            }
         }
     }
     Py_RETURN_FALSE;
@@ -244,6 +293,7 @@ static PyMethodDef webfsd_methods[] = {
      "    root (str): Document root directory (default: '.')\n"
      "    debug (bool): Enable debug output\n"
      "    no_listing (bool): Disable directory listings\n"
+     "    foreground (bool): Run in foreground mode (default: True)\n"
      "    auth (str): Basic auth in 'user:pass' format\n"
      "    log (str): Log file path\n"
      "    cors (str): CORS header value\n"
