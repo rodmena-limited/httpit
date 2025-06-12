@@ -26,7 +26,7 @@
 /* ---------------------------------------------------------------------- */
 /* public variables - server configuration                                */
 
-char    *server_name   = "webfs/" WEBFS_VERSION;
+char    *server_name   = "httpit/" WEBFS_VERSION;
 
 int     debug          = 0;
 int     dontdetach     = 0;
@@ -303,7 +303,7 @@ access_log(struct REQUEST *req, time_t now)
 static void
 syslog_init(void)
 {
-    openlog("webfsd",LOG_PID, LOG_DAEMON);
+    openlog("httpit",LOG_PID, LOG_DAEMON);
 }
 
 static void

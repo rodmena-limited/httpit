@@ -3,14 +3,17 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fasthttp"
-version = "1.21.0"
+name = "httpit"
+version = "1.21.2"
 description = "Ultra-fast lightweight HTTP server"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "GPL-2.0"}
 authors = [
-    {name = "Gerd Knorr (original), Python wrapper contributors"}
+    {name = "RODMENA LIMITED", email = "info@rodmena.co.uk"}
+]
+maintainers = [
+    {name = "RODMENA LIMITED", email = "info@rodmena.co.uk"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -30,11 +33,13 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/fasthttp"
-Repository = "https://github.com/yourusername/fasthttp"
+Homepage = "https://github.com/rodmena-limited/fasthttp"
+Repository = "https://github.com/rodmena-limited/fasthttp"
+Company = "https://rodmena.co.uk"
+Issues = "https://github.com/rodmena-limited/fasthttp/issues"
 
 [project.scripts]
-fasthttp = "fasthttp.__main__:main"
+httpit = "fasthttp.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["fasthttp*"]

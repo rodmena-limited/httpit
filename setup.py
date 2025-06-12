@@ -8,10 +8,10 @@ from setuptools.command.build_py import build_py
 from setuptools.command.install import install
 
 # Version
-VERSION = '1.21.0'
+VERSION = '1.21.2'
 
 class BuildWebfsd(build_py):
-    """Custom build command to compile webfsd binary"""
+    """Custom build command to compile httpit binary"""
     def run(self):
         # Build webfsd binary if not already built
         if not os.path.exists('webfsd') and os.path.exists('webfsd.c'):

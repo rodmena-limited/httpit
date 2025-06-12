@@ -98,9 +98,9 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
         int argc = 0;
         
         /* Get webfsd path from environment variable set by Python */
-        char *webfsd_path = getenv("FASTHTTP_WEBFSD_PATH");
+        char *webfsd_path = getenv("HTTPIT_WEBFSD_PATH");
         if (!webfsd_path) {
-            fprintf(stderr, "FASTHTTP_WEBFSD_PATH not set\n");
+            fprintf(stderr, "HTTPIT_WEBFSD_PATH not set\n");
             _exit(1);
         }
         
@@ -152,7 +152,7 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
         argv[argc] = NULL;
         
         /* Redirect stderr to /dev/null unless debugging */
-        if (!getenv("FASTHTTP_DEBUG")) {
+        if (!getenv("HTTPIT_DEBUG")) {
             freopen("/dev/null", "w", stderr);
         }
         

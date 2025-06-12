@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Command-line interface for FastHTTP server
+Command-line interface for httpit server
 """
 
 import argparse
@@ -14,16 +14,16 @@ from fasthttp import HTTPServer, __version__
 def main():
     """Main entry point for command-line interface."""
     parser = argparse.ArgumentParser(
-        description='FastHTTP - Ultra-fast lightweight HTTP server',
+        description='httpit - Ultra-fast lightweight HTTP server',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  fasthttp                    # Serve current directory on port 8000
-  fasthttp 8080              # Serve current directory on port 8080
-  fasthttp /path/to/files    # Serve specific directory on port 8000
-  fasthttp . 3000            # Serve current directory on port 3000
-  fasthttp -p 8080 -r /var/www --no-listing
-  fasthttp -b user:pass -p 443 --ssl  # Basic auth on HTTPS
+  httpit                    # Serve current directory on port 8000
+  httpit 8080              # Serve current directory on port 8080
+  httpit /path/to/files    # Serve specific directory on port 8000
+  httpit . 3000            # Serve current directory on port 3000
+  httpit -p 8080 -r /var/www --no-listing
+  httpit -b user:pass -p 443 --ssl  # Basic auth on HTTPS
 """)
     
     # Positional arguments for compatibility
@@ -98,7 +98,7 @@ Examples:
     
     # Version
     parser.add_argument('--version', action='version',
-                        version=f'FastHTTP {__version__}')
+                        version=f'httpit {__version__}')
     
     args = parser.parse_args()
     
@@ -185,7 +185,7 @@ Examples:
             user_dir=args.user_dir
         )
         
-        print(f"Starting FastHTTP server...")
+        print(f"Starting httpit server...")
         print(f"Serving directory: {root}")
         print(f"Listening on port: {port}")
         

@@ -1,5 +1,5 @@
 """
-Embedded webfsd binary management
+Embedded httpit binary management
 """
 
 import os
@@ -48,4 +48,4 @@ def get_webfsd_path():
     except:
         pass
     
-    raise RuntimeError("Could not find webfsd binary. Please ensure it is built and available.")
+    raise RuntimeError("Could not find httpit binary. Please ensure it is built and available.")

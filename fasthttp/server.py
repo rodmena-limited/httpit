@@ -1,5 +1,5 @@
 """
-High-level Python interface for the webfsd server
+High-level Python interface for the httpit server
 """
 
 import os
@@ -21,12 +21,12 @@ except ImportError:
 WebfsdError = _webfsd.WebfsdError
 
 # Set the webfsd path in environment
-os.environ['FASTHTTP_WEBFSD_PATH'] = get_webfsd_path()
+os.environ['HTTPIT_WEBFSD_PATH'] = get_webfsd_path()
 
 
 class HTTPServer:
     """
-    Fast HTTP server for serving static files with full webfsd feature support.
+    Fast HTTP server for serving static files with full httpit feature support.
     
     Example:
         >>> server = HTTPServer(port=8000, root='./public')
@@ -70,7 +70,7 @@ class HTTPServer:
                  cgi_dir: Optional[str] = None,
                  user_dir: Optional[str] = None):
         """
-        Initialize HTTP server with full webfsd options.
+        Initialize HTTP server with full httpit options.
         
         Args:
             port: Port to listen on (default: 8000)
