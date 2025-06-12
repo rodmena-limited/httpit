@@ -21,7 +21,7 @@ classifiers = [
     "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
-    "Operating System :: Microsoft :: Windows",
+    # Remove "Operating System :: Microsoft :: Windows",
     "Programming Language :: C",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
