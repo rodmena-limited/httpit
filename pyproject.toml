@@ -65,5 +65,8 @@ manylinux-aarch64-image = "manylinux2014"
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
-before-build = "pip install delvewheel"
+before-build = [
+    "pip install delvewheel",
+    "pip install setuptools wheel"
+]
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
