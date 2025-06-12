@@ -8,20 +8,35 @@ import threading
 import time
 from typing import Optional
 
-try:
-    from fasthttp import _webfsd
-    from fasthttp.embedded import get_webfsd_path
-except ImportError:
-    # Development mode - try parent directory
-    import sys
-    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from fasthttp import _webfsd
-    from fasthttp.embedded import get_webfsd_path
+# Defer imports to avoid circular import
+_webfsd = None
 
-WebfsdError = _webfsd.WebfsdError
+# Create a placeholder WebfsdError that will be replaced
+class WebfsdError(Exception):
+    """HTTP server error"""
+    pass
 
-# Set the webfsd path in environment
-os.environ['HTTPIT_WEBFSD_PATH'] = get_webfsd_path()
+def _ensure_imports():
+    global _webfsd, WebfsdError
+    if _webfsd is None:
+        try:
+            from . import _webfsd as webfsd_module
+            from .embedded import get_webfsd_path
+        except ImportError:
+            # Development mode - try direct import
+            try:
+                import _webfsd as webfsd_module
+                from embedded import get_webfsd_path
+            except ImportError:
+                import fasthttp._webfsd as webfsd_module
+                from fasthttp.embedded import get_webfsd_path
+        
+        _webfsd = webfsd_module
+        # Replace the placeholder with the real WebfsdError
+        globals()['WebfsdError'] = webfsd_module.WebfsdError
+        
+        # Set the webfsd path in environment
+        os.environ['HTTPIT_WEBFSD_PATH'] = get_webfsd_path()
 
 
 class HTTPServer:
@@ -128,6 +143,7 @@ class HTTPServer:
         
     def start(self):
         """Start the HTTP server in the background."""
+        _ensure_imports()
         with self._lock:
             if self.is_running():
                 raise WebfsdError("Server is already running")
@@ -146,6 +162,7 @@ class HTTPServer:
             
     def stop(self):
         """Stop the HTTP server."""
+        _ensure_imports()
         with self._lock:
             if not self.is_running():
                 raise WebfsdError("Server is not running")
@@ -153,6 +170,7 @@ class HTTPServer:
             
     def is_running(self) -> bool:
         """Check if the server is running."""
+        _ensure_imports()
         return _webfsd.is_running()
     
     def restart(self):

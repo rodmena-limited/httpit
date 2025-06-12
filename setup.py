@@ -9,7 +9,7 @@ from setuptools.command.build_py import build_py
 from setuptools.command.install import install
 
 # Version
-VERSION = "1.21.3"
+VERSION = "1.21.4"
 
 
 class BuildWebfsd(build_py):
