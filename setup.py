@@ -12,13 +12,26 @@ class OptimizedBuildExt(build_ext):
         # Optimization flags
         extra_compile_args = [
             '-O3',  # Maximum optimization
-            '-march=native',  # Optimize for current CPU
-            '-mtune=native',
             '-ffast-math',  # Fast floating point
             '-funroll-loops',  # Loop unrolling
             '-fomit-frame-pointer',  # Omit frame pointer
-            '-flto',  # Link time optimization
         ]
+        
+        # Add architecture-specific optimizations
+        import platform
+        if platform.machine() == 'arm64' and sys.platform == 'darwin':
+            # Apple Silicon
+            extra_compile_args.append('-mcpu=apple-m1')
+        elif platform.machine() in ('x86_64', 'amd64'):
+            # Intel/AMD
+            extra_compile_args.extend(['-march=native', '-mtune=native'])
+            
+        # Link time optimization (not always supported)
+        if sys.platform != 'darwin':
+            extra_compile_args.append('-flto')
+            extra_link_args = ['-flto']
+        else:
+            extra_link_args = []
         
         # Platform-specific flags
         if sys.platform == 'darwin':
@@ -35,7 +48,7 @@ class OptimizedBuildExt(build_ext):
         # Add optimization flags to all extensions
         for ext in self.extensions:
             ext.extra_compile_args = getattr(ext, 'extra_compile_args', []) + extra_compile_args
-            ext.extra_link_args = getattr(ext, 'extra_link_args', []) + ['-flto']
+            ext.extra_link_args = getattr(ext, 'extra_link_args', []) + extra_link_args
         
         super().build_extensions()
 
@@ -70,23 +83,12 @@ try:
 except:
     pass
 
-# C extension module
+# C extension module - simple wrapper that calls webfsd binary
 webfsd_module = Extension(
     'fasthttp._webfsd',
-    sources=[
-        'webfsd_module.c',
-        'webfsd_lib.c',
-        'request.c',
-        'response.c',
-        'ls.c',
-        'mime.c',
-        'cgi.c',
-        'ssl.c' if any(m[0] == 'USE_SSL' for m in define_macros) else None,
-    ],
-    include_dirs=['.'],
-    libraries=libraries,
-    define_macros=define_macros,
-    extra_link_args=extra_link_args,
+    sources=['webfsd_python.c'],
+    define_macros=[],
+    extra_compile_args=['-O3'],
     language='c',
 )
 
@@ -111,6 +113,10 @@ setup(
     cmdclass={
         'build_ext': OptimizedBuildExt,
     },
+    package_data={
+        'fasthttp': ['../webfsd'],
+    },
+    include_package_data=True,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',

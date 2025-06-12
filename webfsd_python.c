@@ -11,38 +11,70 @@
 #include <signal.h>
 #include <pthread.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 /* Global state */
 static PyObject *WebfsdError;
 static volatile int server_running = 0;
-static pthread_t server_thread;
 static pid_t server_pid = 0;
 
 /* Start the server by forking webfsd */
 static PyObject *
 webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
 {
+    /* Basic required parameters */
     int port = 8000;
     const char *root = ".";
-    const char *host = NULL;
-    const char *index_file = NULL;
+    
+    /* Most commonly used optional parameters */
+    int debug = 0;
+    int no_listing = 0;
+    const char *auth = NULL;
     const char *log_file = NULL;
-    int enable_listing = 1;
-    int max_connections = 32;
+    const char *cors = NULL;
+    const char *host = NULL;
+    const char *bind_ip = NULL;
     int timeout = 60;
+    int max_connections = 32;
+    const char *index_file = NULL;
     
-    static char *kwlist[] = {"port", "root", "host", "index", "log", 
-                            "listing", "max_connections", "timeout", NULL};
+    static char *kwlist[] = {
+        "port", "root", "debug", "no_listing", "auth", "log", "cors", 
+        "host", "bind_ip", "timeout", "max_connections", "index", NULL
+    };
     
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|issssipi:start_server", kwlist,
-                                     &port, &root, &host, &index_file, &log_file,
-                                     &enable_listing, &max_connections, &timeout)) {
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|isiizzzziiz:start_server", kwlist,
+                                     &port, &root, &debug, &no_listing, &auth,
+                                     &log_file, &cors, &host, &bind_ip, &timeout,
+                                     &max_connections, &index_file)) {
         return NULL;
     }
     
     if (server_running) {
         PyErr_SetString(WebfsdError, "Server is already running");
         return NULL;
+    }
+    
+    /* Check if port is already in use */
+    int test_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (test_socket >= 0) {
+        struct sockaddr_in addr;
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(port);
+        addr.sin_addr.s_addr = INADDR_ANY;
+        
+        if (bind(test_socket, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            close(test_socket);
+            if (errno == EADDRINUSE) {
+                PyErr_Format(WebfsdError, "Port %d is already in use. Please choose a different port or stop the existing server.", port);
+                return NULL;
+            }
+        }
+        close(test_socket);
     }
     
     /* Fork and exec webfsd */
@@ -65,21 +97,15 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
         char *argv[32];
         int argc = 0;
         
-        /* Find webfsd binary - try different locations */
-        char *webfsd_path = NULL;
-        if (access("./webfsd", X_OK) == 0) {
-            webfsd_path = "./webfsd";
-        } else if (access("/usr/local/bin/webfsd", X_OK) == 0) {
-            webfsd_path = "/usr/local/bin/webfsd";
-        } else if (access("/usr/bin/webfsd", X_OK) == 0) {
-            webfsd_path = "/usr/bin/webfsd";
-        } else {
-            /* Try to find in PATH */
-            webfsd_path = "webfsd";
+        /* Get webfsd path from environment variable set by Python */
+        char *webfsd_path = getenv("FASTHTTP_WEBFSD_PATH");
+        if (!webfsd_path) {
+            fprintf(stderr, "FASTHTTP_WEBFSD_PATH not set\n");
+            _exit(1);
         }
         
         argv[argc++] = webfsd_path;
-        argv[argc++] = "-F";  /* Foreground mode */
+        argv[argc++] = "-F";  /* Always run in foreground mode */
         argv[argc++] = "-p";
         argv[argc++] = port_str;
         argv[argc++] = "-r";
@@ -89,14 +115,13 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
         argv[argc++] = "-c";
         argv[argc++] = max_conn_str;
         
-        if (host) {
-            argv[argc++] = "-n";
-            argv[argc++] = (char *)host;
-        }
+        /* Optional parameters */
+        if (debug) argv[argc++] = "-d";
+        if (no_listing) argv[argc++] = "-j";
         
-        if (index_file) {
-            argv[argc++] = "-f";
-            argv[argc++] = (char *)index_file;
+        if (auth) {
+            argv[argc++] = "-b";
+            argv[argc++] = (char *)auth;
         }
         
         if (log_file) {
@@ -104,8 +129,24 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
             argv[argc++] = (char *)log_file;
         }
         
-        if (!enable_listing) {
-            argv[argc++] = "-j";
+        if (cors) {
+            argv[argc++] = "-O";
+            argv[argc++] = (char *)cors;
+        }
+        
+        if (host) {
+            argv[argc++] = "-n";
+            argv[argc++] = (char *)host;
+        }
+        
+        if (bind_ip) {
+            argv[argc++] = "-i";
+            argv[argc++] = (char *)bind_ip;
+        }
+        
+        if (index_file) {
+            argv[argc++] = "-f";
+            argv[argc++] = (char *)index_file;
         }
         
         argv[argc] = NULL;
@@ -125,14 +166,27 @@ webfsd_start(PyObject *self, PyObject *args, PyObject *kwargs)
     /* Parent process */
     server_running = 1;
     
-    /* Give the server a moment to start */
-    usleep(100000);  /* 100ms */
+    /* Give the server more time to start */
+    usleep(500000);  /* 500ms */
     
     /* Check if the process is still running */
     if (kill(server_pid, 0) != 0) {
         server_running = 0;
         server_pid = 0;
-        PyErr_SetString(WebfsdError, "Server failed to start");
+        
+        /* Try to get the exit status */
+        int status;
+        if (waitpid(server_pid, &status, WNOHANG) > 0) {
+            if (WIFEXITED(status)) {
+                PyErr_Format(WebfsdError, "Server exited with code %d", WEXITSTATUS(status));
+            } else if (WIFSIGNALED(status)) {
+                PyErr_Format(WebfsdError, "Server killed by signal %d", WTERMSIG(status));
+            } else {
+                PyErr_SetString(WebfsdError, "Server failed to start");
+            }
+        } else {
+            PyErr_SetString(WebfsdError, "Server failed to start");
+        }
         return NULL;
     }
     
@@ -188,12 +242,16 @@ static PyMethodDef webfsd_methods[] = {
      "Args:\n"
      "    port (int): Port to listen on (default: 8000)\n"
      "    root (str): Document root directory (default: '.')\n"
-     "    host (str): Server hostname\n"
-     "    index (str): Index file name\n"
+     "    debug (bool): Enable debug output\n"
+     "    no_listing (bool): Disable directory listings\n"
+     "    auth (str): Basic auth in 'user:pass' format\n"
      "    log (str): Log file path\n"
-     "    listing (bool): Enable directory listing (default: True)\n"
+     "    cors (str): CORS header value\n"
+     "    host (str): Server hostname\n"
+     "    bind_ip (str): Bind to specific IP address\n"
+     "    timeout (int): Network timeout in seconds (default: 60)\n"
      "    max_connections (int): Maximum connections (default: 32)\n"
-     "    timeout (int): Network timeout in seconds (default: 60)\n"},
+     "    index (str): Index file name\n"},
     {"stop_server", webfsd_stop, METH_NOARGS,
      "Stop the web server."},
     {"is_running", webfsd_is_running, METH_NOARGS,
