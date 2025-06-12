@@ -1,40 +1,52 @@
 name: Publish to PyPI
-
 on:
   push:
     branches:
       - main
   release:
     types: [created]
-
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.12'
-
-    - name: Install dependencies
-      run: |
-        python -m venv .venv
-        . .venv/bin/activate
-        pip install wheel setuptools twine
-
-    - name: Build the package
-      run: |
-        . .venv/bin/activate
-        python setup.py sdist bdist_wheel
-
-    - name: Publish to PyPI
+    - uses: actions/checkout@v3
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.16.2
       env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        . .venv/bin/activate
-        twine upload dist/*
+        CIBW_BUILD: cp39-* cp310-* cp311-* cp312-* cp313-*
+        CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
+    - uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: ./wheelhouse/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build sdist
+      run: pipx run build --sdist
+    - uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: dist/*.tar.gz
+
+  publish:
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'created'
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: wheels
+        path: dist
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: ${{ secrets.PYPI_USERNAME }}
+        password: ${{ secrets.PYPI_PASSWORD }}
