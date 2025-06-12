@@ -8,8 +8,12 @@ from setuptools.command.build_ext import build_ext
 from setuptools.command.build_py import build_py
 from setuptools.command.install import install
 
-# Version
-VERSION = "1.21.5"
+# Read version from VERSION file
+try:
+    with open("VERSION", "r") as f:
+        VERSION = f.read().strip()
+except FileNotFoundError:
+    VERSION = "1.21.0"  # fallback
 
 
 class BuildWebfsd(build_py):
