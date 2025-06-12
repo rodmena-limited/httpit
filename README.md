@@ -1,3 +1,5 @@
+![httpit logo](https://raw.githubusercontent.com/rodmena-limited/fasthttp/main/images/httpit-logo.jpeg)
+
 # httpit
 
 Ultra-fast, lightweight HTTP server for Python. httpit is a high-performance static file server built as a Python C extension, offering exceptional speed and efficiency.
