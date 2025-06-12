@@ -1,7 +1,7 @@
 #
 # simple autoconf system for GNU make
 #
-# (c) 2002-2004 Gerd Knorr <kraxel@bytesex.org>
+# httpit build system - RODMENA LIMITED
 #
 # credits for creating this one go to the autotools people because
 # they managed it to annoy lots of developers and users (including

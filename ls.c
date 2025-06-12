@@ -18,7 +18,7 @@
 #include "httpd.h"
 
 #define LS_ALLOC_SIZE (4 * 4096)
-#define HOMEPAGE "http://bytesex.org/webfs.html"
+#define HOMEPAGE "https://httpit.rodmena.co.uk"
 
 #ifdef USE_THREADS
 static pthread_mutex_t lock_dircache = PTHREAD_MUTEX_INITIALIZER;

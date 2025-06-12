@@ -9,7 +9,7 @@ from setuptools.command.build_py import build_py
 from setuptools.command.install import install
 
 # Version
-VERSION = "1.21.4"
+VERSION = "1.21.5"
 
 
 class BuildWebfsd(build_py):
@@ -168,7 +168,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 setup(
     name="fasthttp",
     version=VERSION,
-    author="Gerd Knorr (original), Python wrapper contributors",
+    author="Farshid Ashouri",
     author_email="",
     description="Ultra-fast lightweight HTTP server",
     long_description=long_description,

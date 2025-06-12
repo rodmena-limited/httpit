@@ -4,16 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "httpit"
-version = "1.21.4"
+version = "1.21.5"
 description = "Ultra-fast lightweight HTTP server"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "GPL-2.0"}
 authors = [
-    {name = "RODMENA LIMITED", email = "info@rodmena.co.uk"}
+    {name = "Farshid Ashouri", email = "farshid@rodmena.co.uk"}
 ]
 maintainers = [
-    {name = "RODMENA LIMITED", email = "info@rodmena.co.uk"}
+    {name = "Farshid Ashouri", email = "farshid@rodmena.co.uk"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

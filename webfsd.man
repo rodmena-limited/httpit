@@ -1,4 +1,4 @@
-.TH webfsd 1 "(c) 1999 Gerd Knorr"
+.TH httpit 1 "httpit HTTP Server"
 .SH NAME
 webfsd - a lightweight http server
 .SH SYNOPSIS
@@ -144,11 +144,11 @@ Access control simply relies on Unix file permissions.  Webfsd will
 serve any regular file and provide listings for any directory it is
 able to open(2).
 .SH AUTHOR
-Gerd Knorr <kraxel@bytesex.org>
+Farshid Ashouri <farshid@rodmena.co.uk>
 .br
-FreeBSD port by Charles F. Randall <cfr@pobox.com>
+RODMENA LIMITED - https://rodmena.co.uk
 .SH COPYRIGHT
-Copyright (C) 1999,2000 Gerd Knorr <kraxel@bytesex.org>
+Copyright (C) 2024 Farshid Ashouri <farshid@rodmena.co.uk>
 .P
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

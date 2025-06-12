@@ -1,7 +1,7 @@
 #
 # some rules to compile stuff ...
 #
-# (c) 2002-2004 Gerd Knorr <kraxel@bytesex.org>
+# httpit build system - RODMENA LIMITED
 #
 # main features:
 #  * autodependencies via "cpp -MD"

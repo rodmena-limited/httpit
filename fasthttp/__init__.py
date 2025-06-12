@@ -8,8 +8,8 @@ Visit https://httpit.rodmena.co.uk for documentation and support.
 
 from fasthttp.server import HTTPServer, WebfsdError
 
-__version__ = "1.21.4"
-__author__ = "RODMENA LIMITED"
-__email__ = "info@rodmena.co.uk"
+__version__ = "1.21.5"
+__author__ = "Farshid Ashouri"
+__email__ = "farshid@rodmena.co.uk"
 __url__ = "https://github.com/rodmena-limited/httpit"
 __all__ = ["HTTPServer", "WebfsdError"]
