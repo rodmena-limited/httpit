@@ -16,6 +16,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Set up MSVC (Windows)
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+    
     - name: Set up Python (Windows)
       if: runner.os == 'Windows'
       uses: actions/setup-python@v4
@@ -32,6 +36,7 @@ jobs:
       env:
         CIBW_BUILD: cp39-* cp310-* cp311-* cp312-* cp313-*
         CIBW_SKIP: "*-win32 *-manylinux_i686 pp* *musllinux*"
+        CIBW_BUILD_VERBOSITY: 1
     
     - name: Build wheels (Linux/macOS)
       if: runner.os != 'Windows'

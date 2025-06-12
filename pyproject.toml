@@ -52,6 +52,7 @@ build = "cp39-* cp310-* cp311-* cp312-* cp313-*"
 skip = "*-win32 *-manylinux_i686 pp* *musllinux*"
 test-requires = "pytest"
 test-command = "python -c \"import fasthttp; print('FastHTTP imported successfully')\""
+build-verbosity = 1
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64", "universal2"]
